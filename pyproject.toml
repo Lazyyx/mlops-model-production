@@ -1,0 +1,7 @@
+[project]
+name = "mlops-model-production"
+version = "0.1.0"
+description = "MLops Model Production Project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
