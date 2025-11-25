@@ -8,8 +8,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-# Configure default API endpoint (change in sidebar if needed)
-DEFAULT_API_URL = "http://localhost:8000/detect"
+API_URL = os.getenv("API_URL", "http://backend:8000")
 
 def display_images_side_by_side(image, boxes):
     """Display original image with detected face boxes.
@@ -70,7 +69,7 @@ def read_image_bytes(image_input):
 def main():
     st.title("Face Detection Demo")
 
-    api_url = st.sidebar.text_input("Face detection API URL", DEFAULT_API_URL)
+    api_url = st.sidebar.text_input("Face detection API URL", API_URL)
 
     st.write("Choose an image to detect faces from:")
     uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
@@ -91,7 +90,8 @@ def main():
     if st.button("Detect Faces"):
         with st.spinner("Sending image to detection API..."):
             try:
-                result = send_image_to_api(image_bytes, api_url)
+                detect_endpoint = f"{api_url}/detect"
+                result = send_image_to_api(image_bytes, detect_endpoint)
             except Exception as e:
                 st.error(f"Detection failed: {e}")
                 return
