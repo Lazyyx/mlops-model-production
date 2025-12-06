@@ -1,0 +1,59 @@
+# .github/workflows/cd.yaml
+
+name: Deploy MLOps Model to GCE via SSH
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: project-cd53e609-dbd3-4daf-8e2
+  ZONE: us-central1-a
+  VM_NAME: application-server-20251206-155936
+  REPO_DIR: mlops-model-production
+  GCP_SA_EMAIL: github-actions-deployer@project-cd53e609-dbd3-4daf-8e2.iam.gserviceaccount.com
+  WIF_PROVIDER_PATH: projects/55496059232/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: 1. Checkout Code
+        uses: actions/checkout@v4
+
+      # etape 2 -> authent GCP via WIF (SANS cle JSON)
+      - name: 2. Authenticate to GCP using Workload Identity Federation
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER_PATH }}
+          service_account: ${{ env.GCP_SA_EMAIL }}
+          
+      - name: 3. Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: 4. Deploy and Restart Docker Containers
+        run: |
+          echo "Connecting to VM ${{ env.VM_NAME }} in zone ${{ env.ZONE }}..."
+          gcloud compute ssh ${{ env.VM_NAME }} \
+            --zone=${{ env.ZONE }} \
+            --tunnel-through-iap \
+            --command='
+              # A. Naviguer vers le répertoire du projet
+              cd ~/${{ env.REPO_DIR }}
+              
+              # B. Pull le dernier code source
+              # Met à jour les fichiers Dockerfile et docker-compose.yml si modifiés
+              git pull origin main
+
+              # C. Reconstruire et relancer les conteneurs
+              # --build: Reconstruit les images avec le nouveau code pull.
+              docker compose up -d --build --force-recreate
+            '
