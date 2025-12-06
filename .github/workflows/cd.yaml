@@ -38,20 +38,10 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-        
       - name: 4. Deploy and Restart Docker Containers
         run: |
-          echo "Connecting to VM ${{ env.VM_NAME }} in zone ${{ env.ZONE }}..."
-          gcloud compute ssh eugeniebeauvillain@${{ env.VM_NAME }} \ # <-- Spécifier l'utilisateur SSH
+          # COMMANDE SIMPLIFIÉE : Utilisez une seule chaîne pour les commandes distantes.
+          gcloud compute ssh eugeniebeauvillain@${{ env.VM_NAME }} \
             --zone=${{ env.ZONE }} \
             --tunnel-through-iap \
-            --command='
-              # A. Naviguer vers le répertoire du projet (CHEMIN CORRIGÉ)
-              cd /home/eugeniebeauvillain/${{ env.REPO_DIR }}
-              
-              # B. Pull le dernier code source
-              git pull origin master # <-- Attention, j'ai mis 'master' si c'est la branche que vous utilisez
-
-              # C. Reconstruire et relancer les conteneurs
-              docker compose up -d --build --force-recreate
-            '
+            --command='cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} && git pull origin master && docker compose up -d --build --force-recreate'
