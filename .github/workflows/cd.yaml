@@ -38,22 +38,20 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-
+        
       - name: 4. Deploy and Restart Docker Containers
         run: |
           echo "Connecting to VM ${{ env.VM_NAME }} in zone ${{ env.ZONE }}..."
-          gcloud compute ssh ${{ env.VM_NAME }} \
+          gcloud compute ssh eugeniebeauvillain@${{ env.VM_NAME }} \ # <-- Spécifier l'utilisateur SSH
             --zone=${{ env.ZONE }} \
             --tunnel-through-iap \
             --command='
-              # A. Naviguer vers le répertoire du projet
-              cd ~/${{ env.REPO_DIR }}
+              # A. Naviguer vers le répertoire du projet (CHEMIN CORRIGÉ)
+              cd /home/eugeniebeauvillain/${{ env.REPO_DIR }}
               
               # B. Pull le dernier code source
-              # Met à jour les fichiers Dockerfile et docker-compose.yml si modifiés
-              git pull origin main
+              git pull origin master # <-- Attention, j'ai mis 'master' si c'est la branche que vous utilisez
 
               # C. Reconstruire et relancer les conteneurs
-              # --build: Reconstruit les images avec le nouveau code pull.
               docker compose up -d --build --force-recreate
             '
