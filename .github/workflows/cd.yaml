@@ -5,7 +5,7 @@ name: Deploy MLOps Model to GCE via SSH
 on:
   push:
     branches:
-      - main
+      - master
 
 env:
   PROJECT_ID: project-cd53e609-dbd3-4daf-8e2

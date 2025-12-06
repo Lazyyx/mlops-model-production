@@ -8,7 +8,6 @@ This project provides a sentiment analysis API for movie reviews using a pre-tra
 - **Dockerized**: Easily deployable using Docker.
 - **CI/CD**: Automated deployment to a VM using GitHub Actions.
 
-
 ## Setup
 
 ### Prerequisites
