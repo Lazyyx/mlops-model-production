@@ -27,7 +27,6 @@ jobs:
       - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      # etape 2 -> authent GCP via WIF (SANS cle JSON)
       - name: 2. Authenticate to GCP using Workload Identity Federation
         uses: 'google-github-actions/auth@v2'
         with:
@@ -38,10 +37,38 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-      - name: 4. Deploy and Restart Docker Containers
+      
+      - name: 4. Build Docker Images
         run: |
-          # COMMANDE SIMPLIFIÉE : Utilisez une seule chaîne pour les commandes distantes.
+          # Construction du Backend
+          docker build -t gcr.io/${{ env.PROJECT_ID }}/mlops-repo/backend:latest -f src/api/Dockerfile . 
+          # Construction du Frontend (Ajouté)
+          docker build -t gcr.io/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest -f src/ui/Dockerfile .
+
+      - name: 5. Push Docker Images to GAR
+        run: |
+          # 1. Configurer l'authentification Docker via gcloud
+          gcloud auth configure-docker gcr.io
+
+          # 2. Pousser les deux images
+          docker push gcr.io/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
+          docker push gcr.io/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest # Ajouté
+
+      - name: 6. Deploy and Restart Containers on GCE
+        run: |
+          # Commande d'authentification pour le pull depuis le registre (méthode préférée pour WIF)
           gcloud compute ssh eugeniebeauvillain@${{ env.VM_NAME }} \
             --zone=${{ env.ZONE }} \
             --tunnel-through-iap \
-            --command='cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} && git pull origin master && docker compose up -d --build --force-recreate'
+            --command='
+              # A. Authentification pour le pull des images
+              gcloud auth configure-docker gcr.io
+              
+              # B. Pull les deux images
+              docker pull gcr.io/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
+              docker pull gcr.io/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
+              
+              # C. Redémarrer les services (utilise le docker-compose.yml modifié)
+              cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} 
+              docker compose up -d --force-recreate
+            '
