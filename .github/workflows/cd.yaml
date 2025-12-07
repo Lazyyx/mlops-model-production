@@ -66,17 +66,19 @@ jobs:
             --zone=${{ env.ZONE }} \
             --tunnel-through-iap \
             --command='
-              # NAVIGUER ET TIRER LE CODE SOURCE et s'assurer que le code du compose.yml est a jour
+              # DEBUT DES COMMANDES SUR LA VM (doit être entre les guillemets simples)
+              
+              # 1. NAVIGUER ET TIRER LE CODE SOURCE (Assure que docker-compose.yml est à jour)
               cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} 
               git pull origin master
               
-              # A. Authentification pour le pull des images (Hôte GAR)
+              # 2. Authentification Docker sur la VM
               gcloud auth configure-docker us-central1-docker.pkg.dev
               
-              # B. Pull les deux images (Hôte GAR)
-              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:${{ env.IMAGE_TAG }}
-              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:${{ env.IMAGE_TAG }}
+              # 3. Pull les deux images
+              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
+              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
               
-              # C. Redémarrer les services
+              # 4. Redémarrer les services
               docker compose up -d --force-recreate
             '
