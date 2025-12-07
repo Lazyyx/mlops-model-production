@@ -10,6 +10,7 @@ on:
 env:
   PROJECT_ID: project-cd53e609-dbd3-4daf-8e2
   ZONE: us-central1-a
+  IMAGE_TAG: ${{ github.sha }}
   VM_NAME: application-server-20251206-155936
   REPO_DIR: mlops-model-production
   GCP_SA_EMAIL: github-actions-deployer@project-cd53e609-dbd3-4daf-8e2.iam.gserviceaccount.com
@@ -44,11 +45,8 @@ jobs:
           export GAR_HOST=us-central1-docker.pkg.dev
           export REPO_PATH=${{ env.PROJECT_ID }}/mlops-repo
 
-          # 1. Construction du Backend (Image taguée avec le chemin GAR)
-          docker build -t ${GAR_HOST}/${REPO_PATH}/backend:latest -f src/api/Dockerfile . 
-          
-          # 2. Construction du Frontend (Image taguée avec le chemin GAR)
-          docker build -t ${GAR_HOST}/${REPO_PATH}/frontend:latest -f src/ui/Dockerfile .
+          docker build -t ${GAR_HOST}/${REPO_PATH}/backend:${{ env.IMAGE_TAG }} -f src/api/Dockerfile . 
+          docker build -t ${GAR_HOST}/${REPO_PATH}/frontend:${{ env.IMAGE_TAG }} -f src/ui/Dockerfile .
 
       - name: 5. Push Docker Images to GAR
         run: |
@@ -59,8 +57,8 @@ jobs:
           gcloud auth configure-docker ${GAR_HOST}
 
           # 2. Pousser les deux images avec le nouvel hôte
-          docker push ${GAR_HOST}/${REPO_PATH}/backend:latest
-          docker push ${GAR_HOST}/${REPO_PATH}/frontend:latest
+          docker push ${GAR_HOST}/${REPO_PATH}/backend:${{ env.IMAGE_TAG }}
+          docker push ${GAR_HOST}/${REPO_PATH}/frontend:${{ env.IMAGE_TAG }}
 
       - name: 6. Deploy and Restart Containers on GCE
         run: |
@@ -76,8 +74,8 @@ jobs:
               gcloud auth configure-docker us-central1-docker.pkg.dev
               
               # B. Pull les deux images (Hôte GAR)
-              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
-              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
+              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:${{ env.IMAGE_TAG }}
+              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:${{ env.IMAGE_TAG }}
               
               # C. Redémarrer les services
               docker compose up -d --force-recreate
