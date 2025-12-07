@@ -1,19 +1,37 @@
-# Sentiment Analysis API
+# Face Detection API
 
-This project provides a sentiment analysis API for movie reviews using a pre-trained `distilbert-base-uncased` model from Hugging Face. The project includes a FastAPI backend, a web UI, and CI/CD pipeline for deployment.
+This project provides a face detection API using a pre-trained MTCNN model from the `facenet-pytorch` library. The project includes a FastAPI backend and a Streamlit web UI.
 
 ## Features
-- **API**: Analyze sentiment of movie reviews.
-- **Web UI**: Simple interface to interact with the API.
+- **API**: Detect faces in images.
+- **Web UI**: Simple interface to upload an image and see the detected faces.
 - **Dockerized**: Easily deployable using Docker.
 - **CI/CD**: Automated deployment to a VM using GitHub Actions.
+
+## Project Structure
+```
+.
+├── docker-compose.yml
+├── main.py
+├── pyproject.toml
+├── README.md
+├── src
+│   ├── api
+│   │   ├── Dockerfile
+│   │   └── main.py
+│   ├── models
+│   │   └── MTCNN.py
+│   └── ui
+│       ├── app.py
+│       └── Dockerfile
+└── tests
+```
 
 ## Setup
 
 ### Prerequisites
-- Python 3.9+
+- Python 3.12
 - Docker
-- Node.js (optional, for UI development)
 
 ### Installation
 1. Clone the repository:
@@ -22,40 +40,26 @@ This project provides a sentiment analysis API for movie reviews using a pre-tra
    cd mlops-model-production
    ```
 
-2. Install dependencies:
+2. Run the application using docker-compose:
    ```bash
-   pip install -r requirements.txt
+   docker-compose up -d
    ```
 
-3. Run the API:
-   ```bash
-   uvicorn src.api.main:app --reload
-   ```
+The API swagger will be available at `http://localhost:8000/docs` and the UI at `http://localhost:8501`.
 
-4. Open the web UI:
-   Open `src/ui/index.html` in your browser.
+## API
 
-## Docker
+The API has a main endpoint `/detect` that accepts an image file and returns the bounding boxes of the detected faces.
 
-### Build and Run
-1. Build the Docker image:
-   ```bash
-   docker build -t sentiment-analysis-api .
-   ```
-
-2. Run the container:
-   ```bash
-   docker run -d -p 80:80 sentiment-analysis-api
-   ```
+### Example Usage
+```bash
+curl -X POST -F "file=@/path/to/image.jpg" http://localhost:8000/detect
+```
 
 ## CI/CD
 
 This project uses GitHub Actions for CI/CD. On every push to the `master` branch, the application is built and deployed to a VM.
 
-### Deployment
-1. Set up SSH access to your VM.
-2. Update the VM IP and user in `.github/workflows/deploy.yml`.
-3. Push changes to `master` to trigger deployment.
 
 ## License
 This project is licensed under the MIT License.
