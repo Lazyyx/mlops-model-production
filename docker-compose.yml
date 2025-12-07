@@ -1,6 +1,6 @@
 services:
   backend:
-    image: gcr.io/project-cd53e609-dbd3-4daf-8e2/mlops-repo/backend:latest
+    image: us-central1-docker.pkg.dev/project-cd53e609-dbd3-4daf-8e2/mlops-repo/backend:latest
     container_name: face-backend
     ports:
       - "8000:8000"
@@ -8,7 +8,7 @@ services:
       - PYTHONUNBUFFERED=1
 
   frontend:
-    image: gcr.io/project-cd53e609-dbd3-4daf-8e2/mlops-repo/frontend:latest
+    image: us-central1-docker.pkg.dev/project-cd53e609-dbd3-4daf-8e2/mlops-repo/frontend:latest
     container_name: face-frontend
     ports:
       - "8501:8501"

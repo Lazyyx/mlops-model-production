@@ -47,28 +47,26 @@ jobs:
 
       - name: 5. Push Docker Images to GAR
         run: |
-          # 1. Configurer l'authentification Docker via gcloud
-          gcloud auth configure-docker gcr.io
-
-          # 2. Pousser les deux images
-          docker push gcr.io/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
-          docker push gcr.io/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest # Ajouté
+          # Correction de l'hôte d'authentification Docker
+          gcloud auth configure-docker us-central1-docker.pkg.dev # <-- L'hôte GAR
+          
+          # 2. Pousser les deux images avec le nouvel hôte
+          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
+          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
 
       - name: 6. Deploy and Restart Containers on GCE
         run: |
-          # Commande d'authentification pour le pull depuis le registre (méthode préférée pour WIF)
           gcloud compute ssh eugeniebeauvillain@${{ env.VM_NAME }} \
-            --zone=${{ env.ZONE }} \
-            --tunnel-through-iap \
+            # ... autres options ...
             --command='
-              # A. Authentification pour le pull des images
-              gcloud auth configure-docker gcr.io
+              # A. Authentification pour le pull des images (Hôte GAR)
+              gcloud auth configure-docker us-central1-docker.pkg.dev # <-- L'hôte GAR
               
-              # B. Pull les deux images
-              docker pull gcr.io/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
-              docker pull gcr.io/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
+              # B. Pull les deux images (Hôte GAR)
+              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
+              docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
               
-              # C. Redémarrer les services (utilise le docker-compose.yml modifié)
+              # C. Redémarrer les services
               cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} 
               docker compose up -d --force-recreate
             '
