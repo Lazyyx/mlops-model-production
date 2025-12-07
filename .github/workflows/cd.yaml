@@ -37,22 +37,30 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-      
+          
       - name: 4. Build Docker Images
         run: |
-          # Construction du Backend
-          docker build -t gcr.io/${{ env.PROJECT_ID }}/mlops-repo/backend:latest -f src/api/Dockerfile . 
-          # Construction du Frontend (Ajouté)
-          docker build -t gcr.io/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest -f src/ui/Dockerfile .
+          # Chemin complet GAR
+          export GAR_HOST=us-central1-docker.pkg.dev
+          export REPO_PATH=${{ env.PROJECT_ID }}/mlops-repo
+
+          # 1. Construction du Backend (Image taguée avec le chemin GAR)
+          docker build -t ${GAR_HOST}/${REPO_PATH}/backend:latest -f src/api/Dockerfile . 
+          
+          # 2. Construction du Frontend (Image taguée avec le chemin GAR)
+          docker build -t ${GAR_HOST}/${REPO_PATH}/frontend:latest -f src/ui/Dockerfile .
 
       - name: 5. Push Docker Images to GAR
         run: |
-          # Correction de l'hôte d'authentification Docker
-          gcloud auth configure-docker us-central1-docker.pkg.dev # <-- L'hôte GAR
+          export GAR_HOST=us-central1-docker.pkg.dev
+          export REPO_PATH=${{ env.PROJECT_ID }}/mlops-repo
           
+          # 1. Configurer l'authentification Docker via gcloud
+          gcloud auth configure-docker ${GAR_HOST}
+
           # 2. Pousser les deux images avec le nouvel hôte
-          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
-          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
+          docker push ${GAR_HOST}/${REPO_PATH}/backend:latest
+          docker push ${GAR_HOST}/${REPO_PATH}/frontend:latest
 
       - name: 6. Deploy and Restart Containers on GCE
         run: |
