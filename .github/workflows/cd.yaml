@@ -65,16 +65,20 @@ jobs:
       - name: 6. Deploy and Restart Containers on GCE
         run: |
           gcloud compute ssh eugeniebeauvillain@${{ env.VM_NAME }} \
-            # ... autres options ...
+            --zone=${{ env.ZONE }} \
+            --tunnel-through-iap \
             --command='
+              # NAVIGUER ET TIRER LE CODE SOURCE et s'assurer que le code du compose.yml est a jour
+              cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} 
+              git pull origin master
+              
               # A. Authentification pour le pull des images (Hôte GAR)
-              gcloud auth configure-docker us-central1-docker.pkg.dev # <-- L'hôte GAR
+              gcloud auth configure-docker us-central1-docker.pkg.dev
               
               # B. Pull les deux images (Hôte GAR)
               docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/backend:latest
               docker pull us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/mlops-repo/frontend:latest
               
               # C. Redémarrer les services
-              cd /home/eugeniebeauvillain/${{ env.REPO_DIR }} 
               docker compose up -d --force-recreate
             '
