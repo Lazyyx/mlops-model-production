@@ -20,13 +20,7 @@ async def health_check():
 @app.post("/detect")
 async def detect(file: bytes = File(...)):
     """Endpoint to detect faces in an uploaded image."""
-    try:
-        image = Image.open(BytesIO(file)).convert("RGB")
-        image_np = np.array(image)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid image file")
-
-    boxes = detect_faces(image_np)
+    boxes = detect_faces(file)
     boxes_list = boxes.tolist() if boxes is not None else []
 
     return {"boxes": boxes_list}
