@@ -17,6 +17,8 @@ services:
     environment:
       - API_URL=/api
       - PYTHONUNBUFFERED=1
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
 
   nginx:
     image: nginx:alpine
