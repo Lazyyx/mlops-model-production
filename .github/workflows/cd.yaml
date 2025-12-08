@@ -45,8 +45,17 @@ jobs:
           export GAR_HOST=us-central1-docker.pkg.dev
           export REPO_PATH=${{ env.PROJECT_ID }}/mlops-repo
 
-          docker build -t ${GAR_HOST}/${REPO_PATH}/backend:${{ env.IMAGE_TAG }} -f src/api/Dockerfile . 
-          docker build -t ${GAR_HOST}/${REPO_PATH}/frontend:${{ env.IMAGE_TAG }} -f src/ui/Dockerfile .
+          # backend
+          docker build \
+            -t ${GAR_HOST}/${REPO_PATH}/backend:${{ env.IMAGE_TAG }} \
+            -t ${GAR_HOST}/${REPO_PATH}/backend:latest \
+            -f src/api/Dockerfile .
+
+          # frontend
+          docker build \
+            -t ${GAR_HOST}/${REPO_PATH}/frontend:${{ env.IMAGE_TAG }} \
+            -t ${GAR_HOST}/${REPO_PATH}/frontend:latest \
+            -f src/ui/Dockerfile .
 
       - name: 5. Push Docker Images to GAR
         run: |
@@ -56,9 +65,13 @@ jobs:
           # 1. Configurer l'authentification Docker via gcloud
           gcloud auth configure-docker ${GAR_HOST}
 
-          # 2. Pousser les deux images avec le nouvel hôte
+          # backend
           docker push ${GAR_HOST}/${REPO_PATH}/backend:${{ env.IMAGE_TAG }}
+          docker push ${GAR_HOST}/${REPO_PATH}/backend:latest
+
+          # frontend
           docker push ${GAR_HOST}/${REPO_PATH}/frontend:${{ env.IMAGE_TAG }}
+          docker push ${GAR_HOST}/${REPO_PATH}/frontend:latest
 
       - name: 6. Deploy and Restart Containers on GCE
         run: |
