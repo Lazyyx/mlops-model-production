@@ -1,5 +1,6 @@
 from src.models.MTCNN import detect_faces
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+from src.api.security import verify_api_key
 import uvicorn
 import numpy as np
 from io import BytesIO
@@ -24,3 +25,12 @@ async def detect(file: bytes = File(...)):
     boxes_list = boxes.tolist() if boxes is not None else []
 
     return {"boxes": boxes_list}
+
+"""
+@app.post("/detect", dependencies=[Depends(verify_api_key)])
+async def detect(file: bytes = File(...)):
+    boxes = detect_faces(file)
+    boxes_list = boxes.tolist() if boxes is not None else []
+
+    return {"boxes": boxes_list}
+"""
