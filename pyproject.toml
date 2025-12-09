@@ -8,10 +8,9 @@ dependencies = [
     "facenet-pytorch>=2.5.3",
     "fastapi[standard]>=0.121.1",
     "matplotlib>=3.10.7",
+    "mtcnn>=1.0.0",
     "pydantic>=2.12.4",
     "streamlit>=1.51.0",
-    "torch>=2.9.0",
-    "torchvision>=0.24.0",
-    "transformers>=4.57.1",
+    "tensorflow>=2.20.0",
     "uvicorn>=0.38.0",
 ]

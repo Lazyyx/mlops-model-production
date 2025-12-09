@@ -1,93 +1,214 @@
 import io
-import base64
 import os
-import datetime
+from typing import List, Dict, Optional
+
 import requests
-from PIL import Image, ImageDraw, ImageFont
 import streamlit as st
+from PIL import Image
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+from matplotlib.patches import Rectangle, Circle
 
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_URL_DEFAULT = os.getenv("API_URL", "http://backend:8000")
 
-def display_images_side_by_side(image, boxes):
-    """Display original image with detected face boxes.
 
-    Accepts `image` as bytes or a PIL Image. `boxes` is expected to be a
-    list/iterable of [x1, y1, x2, y2] coordinates (or None).
+# ---------- Utils d'affichage ----------
+
+def display_detections(
+    image_bytes: bytes,
+    boxes: List[List[float]],
+    keypoints: Optional[List[Optional[Dict]]] = None,
+    scores: Optional[List[Optional[float]]] = None,
+    show_keypoints: bool = True,
+    show_scores: bool = True,
+):
     """
-    st.subheader("Detected Faces")
+    Affiche l'image avec les bounding boxes, keypoints et scores optionnels.
+    """
+    if not boxes:
+        st.info("No faces detected.")
+        return
 
-    # Ensure we have a PIL Image to display
-    if isinstance(image, (bytes, bytearray)):
-        image = Image.open(io.BytesIO(image)).convert("RGB")
-    elif isinstance(image, Image.Image):
-        image = image.convert("RGB")
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
     fig, ax = plt.subplots(1, 1, figsize=(8, 8))
     ax.imshow(image)
 
-    if boxes:
-        for box in boxes:
-            try:
-                x1, y1, x2, y2 = map(int, box)
-            except Exception:
-                # skip malformed box
-                continue
-            rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1,
-                                     linewidth=2, edgecolor='r', facecolor='none')
-            ax.add_patch(rect)
+    for idx, box in enumerate(boxes):
+        try:
+            x1, y1, x2, y2 = map(int, box)
+        except Exception:
+            continue
 
-    ax.axis('off')
+        # Rectangle pour la face
+        rect = Rectangle(
+            (x1, y1),
+            x2 - x1,
+            y2 - y1,
+            linewidth=2,
+            edgecolor="lime",
+            facecolor="none",
+        )
+        ax.add_patch(rect)
+
+        # Score (si dispo)
+        if scores and show_scores and idx < len(scores) and scores[idx] is not None:
+            ax.text(
+                x1,
+                max(y1 - 5, 0),
+                f"{scores[idx]:.2f}",
+                fontsize=10,
+                color="yellow",
+                bbox=dict(facecolor="black", alpha=0.5, pad=1),
+            )
+
+        # Keypoints (si dispo)
+        if keypoints and show_keypoints and idx < len(keypoints) and keypoints[idx]:
+            for _, pt in keypoints[idx].items():
+                try:
+                    px, py = pt
+                    circ = Circle((px, py), radius=2, color="red")
+                    ax.add_patch(circ)
+                except Exception:
+                    continue
+
+    ax.axis("off")
     st.pyplot(fig)
 
-def send_image_to_api(image_bytes, api_url, token, filename="image.jpg", mime="image/jpeg"):
-    """Send image bytes to the face detection API and return the response.
-
-    Uses multipart/form-data with the field name `file` so FastAPI's
-    `file: bytes = File(...)` handler receives the bytes correctly.
-    """
-    
-    headers = {
-        "X-API-Key": token
-        }
-    
-    files = {"file": (filename, image_bytes, mime)}
-    response = requests.post(api_url, files=files, headers=headers, timeout=20)
-    response.raise_for_status()
-    return response.json()
 
 def read_image_bytes(image_input):
-    """Read image bytes from uploaded file or camera input."""
+    """
+    Lit les bytes depuis un UploadedFile (file_uploader / camera_input).
+    Retourne (image_bytes, filename, mime).
+    """
     if hasattr(image_input, "getvalue"):
-        # For uploaded files
         image_bytes = image_input.getvalue()
-        filename = image_input.name
-        mime = image_input.type
+        filename = image_input.name or "uploaded_image.jpg"
+        mime = image_input.type or "image/jpeg"
     else:
-        # For camera input
         image_bytes = image_input.read()
         filename = "camera_image.jpg"
         mime = "image/jpeg"
     return image_bytes, filename, mime
 
+
+def send_image_to_api(
+    image_bytes: bytes,
+    api_url: str,
+    token: Optional[str] = None,
+    filename: str = "image.jpg",
+    mime: str = "image/jpeg",
+    params: Optional[Dict] = None,
+):
+    """
+    Envoie l'image à l'API via multipart/form-data (champ 'file').
+    """
+    headers = {}
+    if token:
+        headers["X-API-Key"] = token
+
+    files = {"file": (filename, image_bytes, mime)}
+
+    response = requests.post(
+        api_url,
+        files=files,
+        headers=headers,
+        params=params or {},
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+# ---------- App principale Streamlit ----------
+
 def main():
-    st.title("Face Detection Demo")
+    st.title("Face Detection Demo (MTCNN)")
 
+    # ---- Barre latérale : config API + paramètres de détection ----
     with st.sidebar:
-        st.header("Configuration API")
+        st.header("API Settings")
 
-        api_key_input = st.text_input("X-API-Key (Token)", type="password", key="api_token_key")
+        api_key_input = st.text_input(
+            "X-API-Key (Token)",
+            type="password",
+            help="Optionnel si ton API est protégée par une clé.",
+        )
+
+        st.markdown("---")
+        st.header("Detection mode")
+
+        mode_label = st.selectbox(
+            "Mode",
+            [
+                "Faces only (boxes)",
+                "Faces + keypoints",
+                "Full (boxes + keypoints + scores)",
+            ],
+        )
+
+        # Mapping mode → endpoint
+        endpoint_map = {
+            "Faces only (boxes)": "/detect",
+            "Faces + keypoints": "/detect/keypoints",
+            "Full (boxes + keypoints + scores)": "/detect/full",
+        }
+        endpoint_path = endpoint_map[mode_label]
+
+        st.markdown("---")
+        st.header("Detection parameters")
+
+        min_face_size = st.slider(
+            "Min face size (pixels)",
+            min_value=10,
+            max_value=200,
+            value=20,
+            step=5,
+            help="Filtre les visages trop petits.",
+        )
+
+        threshold_pnet = st.slider(
+            "PNet threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.6,
+            step=0.05,
+        )
+        threshold_rnet = st.slider(
+            "RNet threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.7,
+            step=0.05,
+        )
+        threshold_onet = st.slider(
+            "ONet threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.7,
+            step=0.05,
+        )
+
+        score_min = None
+        if mode_label == "Full (boxes + keypoints + scores)":
+            score_min = st.slider(
+                "Min confidence score",
+                min_value=0.0,
+                max_value=1.0,
+                value=0.8,
+                step=0.05,
+                help="Filtre les détections de faible confiance.",
+            )
+
+        st.markdown("---")
+        show_keypoints = st.checkbox("Show keypoints (if available)", value=True)
+        show_scores = st.checkbox("Show scores (if available)", value=True)
+
 
     st.write("Choose an image to detect faces from:")
     uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
     camera_img = st.camera_input("Or take a picture with your webcam")
 
-    image_input = None
-    if uploaded_file is not None:
-        image_input = uploaded_file
-    elif camera_img is not None:
-        image_input = camera_img
+    image_input = uploaded_file or camera_img
 
     if image_input is None:
         st.info("Upload an image or take one using the camera to start.")
@@ -96,29 +217,66 @@ def main():
     image_bytes, filename, mime = read_image_bytes(image_input)
 
     if st.button("Detect Faces"):
-        if not api_key_input:
-            st.error("Veuillez entrer votre X-API-Key (Token) dans la barre latérale.")
-            return
         
+        api_url = f"{API_URL_DEFAULT.rstrip('/')}{endpoint_path}"
+
+        params = {
+            "min_face_size": min_face_size,
+            "threshold_pnet": threshold_pnet,
+            "threshold_rnet": threshold_rnet,
+            "threshold_onet": threshold_onet,
+        }
+        if score_min is not None:
+            params["score_min"] = score_min
+
         with st.spinner("Sending image to detection API..."):
             try:
-                detect_endpoint = f"{API_URL}/detect"
-                result = send_image_to_api(image_bytes, detect_endpoint, api_key_input)
+                result = send_image_to_api(
+                    image_bytes=image_bytes,
+                    api_url=api_url,
+                    token=api_key_input or None,
+                    filename=filename,
+                    mime=mime,
+                    params=params,
+                )
             except requests.exceptions.HTTPError as http_err:
-                if http_err.response.status_code == 401:
-                    st.error("Accès refusé (401). Vérifiez votre X-API-Key.")
-                else:
-                    st.error(f"Erreur HTTP lors de la détection : {http_err}")
+                st.error(f"HTTP error from API: {http_err} ({http_err.response.text})")
+                return
             except Exception as e:
                 st.error(f"Detection failed: {e}")
                 return
 
-        boxes = result.get("boxes")
+        boxes: List[List[float]] = []
+        keypoints: Optional[List[Optional[Dict]]] = None
+        scores: Optional[List[Optional[float]]] = None
 
-        if boxes is not None:
-            display_images_side_by_side(image_bytes, boxes)
-        else:
-            st.success("No processed image returned by API.")
+        if mode_label == "Faces only (boxes)":
+            boxes = result.get("boxes", [])
+
+        elif mode_label == "Faces + keypoints":
+            boxes = result.get("boxes", [])
+            keypoints = result.get("keypoints", [])
+
+        elif mode_label == "Full (boxes + keypoints + scores)":
+            detections = result.get("detections", [])
+            boxes = [det.get("box") for det in detections if det.get("box") is not None]
+            keypoints = [det.get("keypoints") for det in detections]
+            scores = [det.get("score") for det in detections]
+
+        # Affichage graphique
+        display_detections(
+            image_bytes=image_bytes,
+            boxes=boxes,
+            keypoints=keypoints,
+            scores=scores,
+            show_keypoints=show_keypoints,
+            show_scores=show_scores,
+        )
+
+        # Affichage brute JSON dans un expander pour debug
+        with st.expander("Raw API response"):
+            st.json(result)
+
 
 if __name__ == "__main__":
     main()

@@ -9,3 +9,5 @@ outputs/
 # Misc
 *.log
 .DS_Store
+
+.env.local

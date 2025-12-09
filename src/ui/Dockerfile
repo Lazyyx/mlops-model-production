@@ -2,16 +2,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY pyproject.toml /app/
-COPY uv.lock /app/
+COPY pyproject.toml uv.lock ./
 
-# Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-COPY . /app
-COPY src ./src
+RUN uv sync --frozen --no-cache
 
-RUN uv sync --frozen
+COPY src ./src
 
 ENV PYTHONPATH=/app/src
 ENV STREAMLIT_SERVER_PORT=8501
