@@ -18,19 +18,10 @@ async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
 
-@app.post("/detect")
-async def detect(file: bytes = File(...)):
-    """Endpoint to detect faces in an uploaded image."""
-    boxes = detect_faces(file)
-    boxes_list = boxes.tolist() if boxes is not None else []
 
-    return {"boxes": boxes_list}
-
-"""
 @app.post("/detect", dependencies=[Depends(verify_api_key)])
 async def detect(file: bytes = File(...)):
     boxes = detect_faces(file)
     boxes_list = boxes.tolist() if boxes is not None else []
 
     return {"boxes": boxes_list}
-"""

@@ -8,7 +8,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-API_URL = os.getenv("API_URL", "http://backend:8000")
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 def display_images_side_by_side(image, boxes):
     """Display original image with detected face boxes.
@@ -41,14 +41,19 @@ def display_images_side_by_side(image, boxes):
     ax.axis('off')
     st.pyplot(fig)
 
-def send_image_to_api(image_bytes, api_url, filename="image.jpg", mime="image/jpeg"):
+def send_image_to_api(image_bytes, api_url, token, filename="image.jpg", mime="image/jpeg"):
     """Send image bytes to the face detection API and return the response.
 
     Uses multipart/form-data with the field name `file` so FastAPI's
     `file: bytes = File(...)` handler receives the bytes correctly.
     """
+    
+    headers = {
+        "X-API-Key": token
+        }
+    
     files = {"file": (filename, image_bytes, mime)}
-    response = requests.post(api_url, files=files, timeout=20)
+    response = requests.post(api_url, files=files, headers=headers, timeout=20)
     response.raise_for_status()
     return response.json()
 
@@ -69,7 +74,10 @@ def read_image_bytes(image_input):
 def main():
     st.title("Face Detection Demo")
 
-    api_url = st.sidebar.text_input("Face detection API URL", API_URL)
+    with st.sidebar:
+        st.header("Configuration API")
+
+        api_key_input = st.text_input("X-API-Key (Token)", type="password", key="api_token_key")
 
     st.write("Choose an image to detect faces from:")
     uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
@@ -88,10 +96,19 @@ def main():
     image_bytes, filename, mime = read_image_bytes(image_input)
 
     if st.button("Detect Faces"):
+        if not api_key_input:
+            st.error("Veuillez entrer votre X-API-Key (Token) dans la barre latérale.")
+            return
+        
         with st.spinner("Sending image to detection API..."):
             try:
-                detect_endpoint = f"{api_url}/detect"
-                result = send_image_to_api(image_bytes, detect_endpoint)
+                detect_endpoint = f"{API_URL}/detect"
+                result = send_image_to_api(image_bytes, detect_endpoint, api_key_input)
+            except requests.exceptions.HTTPError as http_err:
+                if http_err.response.status_code == 401:
+                    st.error("Accès refusé (401). Vérifiez votre X-API-Key.")
+                else:
+                    st.error(f"Erreur HTTP lors de la détection : {http_err}")
             except Exception as e:
                 st.error(f"Detection failed: {e}")
                 return
