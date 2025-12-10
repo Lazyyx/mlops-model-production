@@ -50,6 +50,6 @@ async def limit_session_calls(session_id: str = Depends(verify_api_key)):
             detail=f"Limite de {MAX_CALLS} appels par session dépassée."
         )
     
-    # expire après 1 heure (3600 secondes)
+    # expire après 2 minutes (120 secondes)
     if call_count == 1:
-        redis_client.expire(key, 3600)
+        redis_client.expire(key, 120)
