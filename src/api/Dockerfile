@@ -9,7 +9,6 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN uv sync --frozen --no-cache
 
-COPY .env ./
 COPY src ./src
 
 ENV PYTHONPATH=/app/src
