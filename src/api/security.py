@@ -3,7 +3,7 @@ from redis import Redis
 from fastapi import Header, HTTPException, Depends
 
 
-MAX_CALLS = 5
+MAX_CALLS = 100
 REDIS_HOST = "redis"
 # for now we store in env file
 API_SECRET_TOKEN = os.environ.get("APP_TOKEN") 
