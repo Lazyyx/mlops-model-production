@@ -21,17 +21,19 @@ async def health_check():
 
 @app.post("/detect", dependencies=[Depends(verify_api_key)])
 async def detect(file: bytes = File(...)):
-    boxes = detect_faces(file)
-    boxes_list = boxes.tolist() if boxes is not None else []
-
-    detection_result = detect_faces(file)
-    if detection_result is not None and isinstance(detection_result, tuple):
-        boxes = detection_result[0]
-    elif detection_result is not None:
-        boxes = detection_result
-    else:
-        boxes = None
-        
-    boxes_list = boxes.tolist() if boxes is not None else []
     
+    detection_result = detect_faces(file)
+    
+    if detection_result is not None and isinstance(detection_result, tuple):
+        extracted_boxes = detection_result[0]
+    elif detection_result is not None:
+        extracted_boxes = detection_result
+    else:
+        extracted_boxes = None
+        
+    if extracted_boxes is not None and isinstance(extracted_boxes, np.ndarray):
+        boxes_list = extracted_boxes.tolist()
+    else:
+        boxes_list = []
+        
     return {"boxes": boxes_list}
