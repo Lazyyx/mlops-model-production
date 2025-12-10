@@ -3,7 +3,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query
 from fastapi.responses import JSONResponse
 from src.models.MTCNN import detect_faces
-from src.api.security import verify_api_key
+from src.api.security import verify_api_key, limit_session_calls
 from PIL import UnidentifiedImageError
 
 app = FastAPI(
@@ -31,7 +31,7 @@ COMMON_DETECTION_PARAMS = dict(
 )
 
 
-@app.post("/detect", dependencies=[Depends(verify_api_key)])
+@app.post("/detect", dependencies=[Depends(limit_session_calls)])
 async def detect_basic(
     file: UploadFile = File(..., description="Image file"),
     min_face_size: int = COMMON_DETECTION_PARAMS["min_face_size"],
@@ -58,7 +58,7 @@ async def detect_basic(
     return {"boxes": boxes}
 
 
-@app.post("/detect/keypoints", dependencies=[Depends(verify_api_key)])
+@app.post("/detect/keypoints", dependencies=[Depends(limit_session_calls)])
 async def detect_with_keypoints(
     file: UploadFile = File(..., description="Image file"),
     min_face_size: int = COMMON_DETECTION_PARAMS["min_face_size"],
@@ -82,7 +82,7 @@ async def detect_with_keypoints(
     return {"boxes": boxes, "keypoints": keypoints}
 
 
-@app.post("/detect/full", dependencies=[Depends(verify_api_key)])
+@app.post("/detect/full", dependencies=[Depends(limit_session_calls)])
 async def detect_full(
     file: UploadFile = File(..., description="Image file"),
     min_face_size: int = COMMON_DETECTION_PARAMS["min_face_size"],
