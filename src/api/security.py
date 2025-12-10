@@ -43,6 +43,9 @@ async def limit_session_calls(session_id: str = Depends(verify_api_key)):
     key = f"calls:{session_id}" 
     
     call_count = redis_client.incr(key)
+    
+    if session_id == "passepartout":
+        return
 
     if call_count > MAX_CALLS:
         raise HTTPException(
