@@ -1,10 +1,16 @@
 services:
+  redis:
+      image: redis:7-alpine
+      container_name: redis_session_store_dev
+      expose:
+        - "6379" 
+      restart: always
+      
   backend:
     build:
       context: .
       dockerfile: src/api/Dockerfile
     container_name: face-backend
-    # CORRECTION : Mappe le port 8000 du conteneur au port 8000 de l'hôte
     ports: 
       - "8000:8000"
     env_file:
@@ -12,19 +18,19 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: always
+    depends_on:
+      - redis
 
   frontend:
     build:
       context: .
       dockerfile: src/ui/Dockerfile
     container_name: face-frontend
-    # CORRECTION : Mappe le port 8501 du conteneur au port 8501 de l'hôte
     ports:
       - "8501:8501"
     depends_on:
       - backend
     environment:
-      # Reste correct : l'appel se fait au nom de service Docker interne
       - API_URL=http://backend:8000
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_ENABLE_CORS=true

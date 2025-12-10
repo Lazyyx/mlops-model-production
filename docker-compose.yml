@@ -1,11 +1,21 @@
 services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_session_store
+    expose:
+      - "6379"
+    restart: always
+    
   backend:
     image: us-central1-docker.pkg.dev/project-cd53e609-dbd3-4daf-8e2/mlops-repo/backend:latest
     env_file:
       - .env
     container_name: face-backend
+    depends_on:
+      - redis
     expose:
-      - "8000"              # only inside Docker network
+      - "8000"
     environment:
       - PYTHONUNBUFFERED=1
 
